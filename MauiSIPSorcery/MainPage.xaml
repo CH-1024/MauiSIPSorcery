@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MauiSIPSorcery.MainPage"
+             x:Name="_VideoStartPage"
+             xmlns:l="clr-namespace:MauiSIPSorcery" 
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
+             x:DataType="l:MainPageViewModel">
+
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing" Command="{Binding AppearingCommand}" BindingContext="{Binding Path=BindingContext, Source={x:Reference _VideoStartPage}, x:DataType=ContentPage}" />
+    </ContentPage.Behaviors>
+
+    <ContentPage.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="MinimumHeightRequest" Value="20"/>
+        </Style>
+    </ContentPage.Resources>
+
+    <VerticalStackLayout Spacing="10" Padding="20">
+
+        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+            <!--<Entry Text="{Binding User.UserId}" FontSize="Medium" IsReadOnly="True" WidthRequest="100"/>-->
+            <Label FontSize="Medium" Text="{Binding User.Username}" WidthRequest="80"/>
+            <Label FontSize="Medium" Text="-"/>
+            <Label FontSize="Medium" Text="{Binding State}" WidthRequest="120"/>
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+            <Entry Text="{Binding Username}" WidthRequest="100" Placeholder="用户名"/>
+            <Entry Text="{Binding Password}" WidthRequest="100" Placeholder="密码" IsPassword="True"/>
+            <Picker WidthRequest="100" ItemsSource="{Binding FriendList}" SelectedItem="{Binding SelectedFriend}" ItemDisplayBinding="{Binding ContactUsername}"/>
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+            <Button Text="Login" Command="{Binding LoginCommand}"/>
+            <Button Text="InitRTC" Command="{Binding InitRTCCommand}"/>
+            <Button Text="SendOffer" Command="{Binding SendOfferCommand}"/>
+            <Button Text="SendMessage" Command="{Binding SendMessageCommand}"/>
+            <Button Text="SendVideo" Command="{Binding SendVideoCommand}"/>
+        </HorizontalStackLayout>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" HorizontalOptions="Fill">
+            <Label Grid.Column="0" HorizontalOptions="Start" VerticalOptions="Center">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <FormattedString.Spans>
+                            <Span Text="Hash:" FontAttributes="Bold"/>
+                            <Span Text="{Binding Hash}" />
+                        </FormattedString.Spans>
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+
+            <Label Grid.Column="1" HorizontalOptions="Start" VerticalOptions="Center">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <FormattedString.Spans>
+                            <Span Text="Length:" FontAttributes="Bold"/>
+                            <Span Text="{Binding Length}" />
+                        </FormattedString.Spans>
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+        </Grid>
+
+
+        <!--<Grid WidthRequest="400" HeightRequest="400" HorizontalOptions="Center" VerticalOptions="Start">
+            <skia:SKCanvasView x:Name="localSKCanvas" ZIndex="1" HorizontalOptions="End" VerticalOptions="Start" WidthRequest="150" HeightRequest="150"/>
+            <skia:SKCanvasView x:Name="remoteSKCanvas"  HorizontalOptions="Fill" VerticalOptions="Fill"/>
+        </Grid>-->
+        
+        <!--<AbsoluteLayout WidthRequest="400" HeightRequest="400" HorizontalOptions="Center" VerticalOptions="Start">
+
+            <skia:SKCanvasView x:Name="remoteSKCanvas" AbsoluteLayout.LayoutBounds="0,0,1,1" AbsoluteLayout.LayoutFlags="All"/>
+
+            <skia:SKCanvasView x:Name="localSKCanvas" ZIndex="1" WidthRequest="150" HeightRequest="150">
+                <skia:SKCanvasView.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnAbsolutePanUpdated"/>
+                </skia:SKCanvasView.GestureRecognizers>
+            </skia:SKCanvasView>
+        </AbsoluteLayout>-->
+
+        <Grid x:Name="RootGrid" WidthRequest="400" HeightRequest="400" HorizontalOptions="Center" VerticalOptions="Start">
+            <skia:SKCanvasView x:Name="remoteSKCanvas" HorizontalOptions="Fill" VerticalOptions="Fill" />
+            <skia:SKCanvasView x:Name="localSKCanvas" ZIndex="1" WidthRequest="150" HeightRequest="150" HorizontalOptions="Start" VerticalOptions="Start" />
+        </Grid>
+
+        <Label HorizontalOptions="Fill" VerticalOptions="Start" HorizontalTextAlignment="Start" VerticalTextAlignment="Start">
+            <Label.FormattedText>
+                <FormattedString>
+                    <FormattedString.Spans>
+                        <Span Text="Message:&#10;" FontAttributes="Bold"/>
+                        <Span Text="{Binding Message}" />
+                    </FormattedString.Spans>
+                </FormattedString>
+            </Label.FormattedText>
+        </Label>
+        
+    </VerticalStackLayout>
+
+</ContentPage>
+
+
+
+<!--<Button.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Offset="0" Color="#888"/>
+            <GradientStop Offset="1" Color="#000"/>
+        </LinearGradientBrush>
+    </Button.Background>-->
