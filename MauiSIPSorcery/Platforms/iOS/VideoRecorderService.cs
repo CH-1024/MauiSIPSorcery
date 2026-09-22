@@ -9,6 +9,7 @@ using MauiSIPSorcery.Interfaces;
 using MediaPlayer;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
+using SIPSorceryMedia.Abstractions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,18 +24,24 @@ namespace MauiSIPSorcery.Platforms.iOS
 {
     public class VideoRecorderService : IVideoRecorder
     {
+        public IVideoEncoder _videoEncoder;
+
         private AVCaptureSession _captureSession;
         private AVCaptureDeviceInput _deviceInput;
         private AVCaptureVideoDataOutput _videoOutput;
 
         public event Action<byte[]> OnVideoFrameArrived;
+        public event Action<uint, byte[]> OnVideoSourceEncodedSample;   // uint durationRtpUnits, byte[] sample
+        public event Action<uint, int, int, byte[], VideoPixelFormatsEnum> OnVideoSourceRawSample;   // uint durationMilliseconds, int width, int height, byte[] sample, VideoPixelFormatsEnum pixelFormat
 
         private bool _isRecording;
 
 
-        public void StartRecording()
+        public void StartRecording(IVideoEncoder encoder)
         {
             if (_isRecording) return;
+
+            _videoEncoder = encoder;
 
             _captureSession = new AVCaptureSession
             {
@@ -67,7 +74,7 @@ namespace MauiSIPSorcery.Platforms.iOS
             };
 
             var _queue = new DispatchQueue("myQueue");
-            var _delegate = new VideoDataDelegate(OnVideoFrameArrived);
+            var _delegate = new VideoDataDelegate(this);
             _videoOutput.SetSampleBufferDelegate(_delegate, _queue);
             _captureSession.AddOutput(_videoOutput);
 
@@ -124,11 +131,11 @@ namespace MauiSIPSorcery.Platforms.iOS
         // 内部类处理帧数据
         private class VideoDataDelegate : AVCaptureVideoDataOutputSampleBufferDelegate
         {
-            public event Action<byte[]> _onVideoFrameArrived;
+            VideoRecorderService _videoRecorder;
 
-            public VideoDataDelegate(Action<byte[]> onVideoFrameArrived)
+            public VideoDataDelegate(VideoRecorderService videoRecorder)
             {
-                _onVideoFrameArrived = onVideoFrameArrived;
+                _videoRecorder = videoRecorder;
             }
 
             public override void DidOutputSampleBuffer(AVCaptureOutput output, CMSampleBuffer sampleBuffer, AVCaptureConnection connection)
@@ -137,21 +144,64 @@ namespace MauiSIPSorcery.Platforms.iOS
                 {
                     try
                     {
-                        // 将帧转换为字节数组（示例：转换为 JPEG）
-                        using var imageBuffer = sampleBuffer.GetImageBuffer();
-                        using var ciImage = new CIImage(imageBuffer);
-                        using var uiImage = new UIImage(ciImage);
-                        using var imageData = uiImage.AsJPEG(0.5f);
-                        var bytes = imageData.ToArray();
+                        var imageBuffer = sampleBuffer.GetImageBuffer();
 
-                        _onVideoFrameArrived?.Invoke(bytes);
+                        if (imageBuffer is not CVPixelBuffer pixelBuffer)
+                            return;
+
+                        int width = (int)pixelBuffer.Width;
+                        int height = (int)pixelBuffer.Height;
+                        int bytesPerRow = (int)pixelBuffer.BytesPerRow;
+
+                        pixelBuffer.Lock(CVPixelBufferLock.ReadOnly);
+
+                        try
+                        {
+                            var bgra = new byte[width * height * 4];
+
+                            var baseAddress = pixelBuffer.BaseAddress;
+
+                            // 如果没有 padding，可以直接复制
+                            if (bytesPerRow == width * 4)
+                            {
+                                Marshal.Copy(baseAddress, bgra, 0, bgra.Length);
+                            }
+                            else
+                            {
+                                // 有 stride 时逐行复制
+                                for (int y = 0; y < height; y++)
+                                {
+                                    Marshal.Copy(IntPtr.Add(baseAddress, y * bytesPerRow), bgra, y * width * 4, width * 4);
+                                }
+                            }
+
+                            if (_videoRecorder.OnVideoSourceEncodedSample != null)
+                            {
+                                // BGRA -> I420
+                                var i420 = PixelConverter.BGRAtoI420(bgra, width, height, width * 4);
+
+                                var encodedBuffer = _videoRecorder._videoEncoder.EncodeVideo(width, height, i420, VideoPixelFormatsEnum.I420, VideoCodecsEnum.VP8);
+
+                                if (encodedBuffer != null)
+                                {
+                                    uint durationRtpUnits = 90000 / 30;
+
+                                    _videoRecorder.OnVideoSourceEncodedSample.Invoke(durationRtpUnits, encodedBuffer);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            pixelBuffer.Unlock(CVPixelBufferLock.ReadOnly);
+                        }
                     }
                     catch (Exception ex)
                     {
-
+                        Console.WriteLine(ex);
                     }
                 }
             }
+
         }
     }
 }

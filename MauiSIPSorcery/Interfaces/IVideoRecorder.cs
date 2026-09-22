@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SIPSorceryMedia.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,8 +11,10 @@ namespace MauiSIPSorcery.Interfaces
     public interface IVideoRecorder
     {
         event Action<byte[]> OnVideoFrameArrived;
+        event Action<uint, byte[]> OnVideoSourceEncodedSample;
+        event Action<uint, int, int, byte[], VideoPixelFormatsEnum> OnVideoSourceRawSample;
 
-        void StartRecording();
+        void StartRecording(IVideoEncoder encoder);
         void StopRecording();
 
     }
